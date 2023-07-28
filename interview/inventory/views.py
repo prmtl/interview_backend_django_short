@@ -1,8 +1,10 @@
+from rest_framework.generics import GenericAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from interview.inventory.models import Inventory, InventoryLanguage, InventoryTag, InventoryType
+from interview.inventory.pagination import InventoryPagination
 from interview.inventory.schemas import InventoryMetaData
 from interview.inventory.serializers import (
     InventoryLanguageSerializer,
@@ -12,9 +14,11 @@ from interview.inventory.serializers import (
 )
 
 
-class InventoryListCreateView(APIView):
+# NOTE: there is no InventoryListView but I assume this one was meant in the task
+class InventoryListCreateView(GenericAPIView):
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
+    pagination_class = InventoryPagination
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         try:
@@ -32,12 +36,12 @@ class InventoryListCreateView(APIView):
         return Response(serializer.data, status=201)
 
     def get(self, request: Request, *args, **kwargs) -> Response:
-        serializer = self.serializer_class(self.get_queryset(), many=True)
+        queryset = self.queryset.all()
+        queryset = self.paginate_queryset(queryset)
+
+        serializer = self.serializer_class(queryset, many=True)
 
         return Response(serializer.data, status=200)
-
-    def get_queryset(self):
-        return self.queryset.all()
 
 
 class InventoryRetrieveUpdateDestroyView(APIView):
