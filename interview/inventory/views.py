@@ -1,3 +1,4 @@
+from django.utils.dateparse import parse_date
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -38,6 +39,35 @@ class InventoryListCreateView(APIView):
 
     def get_queryset(self):
         return self.queryset.all()
+
+
+# NOTE: since task asked to create a new I just added a new, ideally would be to just add
+# filters to InventoryListCreateView
+class InventoryListWithFiltersView(APIView):
+    """Lists inventory items created after a certain day.
+
+
+    Accepts date as a `date` query parameter in ISO 8601 date format like `/inventory/filtered/?date=2023-01-02`
+    """
+
+    queryset = Inventory.objects.all()
+    serializer_class = InventorySerializer
+
+    def get_queryset(self):
+        queryset = self.queryset.all()
+
+        raw_date = self.request.query_params.get("date")
+        date = parse_date(raw_date)
+
+        if date is not None:
+            queryset = queryset.filter(created_at__gt=date)
+
+        return queryset
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+
+        return Response(serializer.data, status=200)
 
 
 class InventoryRetrieveUpdateDestroyView(APIView):
